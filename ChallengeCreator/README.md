@@ -14,7 +14,7 @@ Some elements will not function as the challenge maker intended with some featur
 I have tried my best to make a user friendly tool on my website!
 > Go to https://atomictyler.dev/#peakPresets to get started!
 
-## How do I aapply the challenge?
+## How do I apply the challenge?
 
 After you get your value from the website or you have made your own, click `Copy Final Config`.
 
@@ -55,6 +55,7 @@ public bool noSprinting { get; set; } = false; // If true, you cannot sprint
 public bool noJumping { get; set; } = false; // If true, you cannot jump. This should also disable ropes and chains according to piano's crippled challenge
 public bool endRunOnCurse { get; set; } = false; // If true, the run will end if you get the curse affliction
 public bool noBackpack { get; set; } = false; // If true, you cannot use a backpack
+public bool startSkeleton { get; set; } = false; // If true, you start the run as a skeleton (If you have endRunOnCurse on you will not start with curse.)
 ```
 
 </details>

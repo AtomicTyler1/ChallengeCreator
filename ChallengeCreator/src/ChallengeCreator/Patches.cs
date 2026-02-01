@@ -131,6 +131,24 @@ public static class ChallengeCreatorPatches
     }
 
     [HarmonyPostfix]
+    [HarmonyPatch(typeof(Character), nameof(Character.Start))]
+    public static void StartAsSkeleton(Character __instance)
+    {
+        if (!__instance.IsLocal) return;
+        if (Challenge.startSkeleton)
+        {
+            __instance.data.SetSkeleton(true);
+            __instance.refs.customization.refs.SetSkeleton(true, true);
+            __instance.refs.customization.HideHuman();
+            if (Challenge.endRunOnCurse)
+            {
+                return;
+            }
+            __instance.refs.afflictions.AddStatus(CharacterAfflictions.STATUSTYPE.Curse, 0.2f);
+        }
+    }
+
+    [HarmonyPostfix]
     [HarmonyPatch(typeof(CharacterMovement), nameof(CharacterMovement.SetMovementState))]
     public static void BlockSprintingPostfix(CharacterMovement __instance)
     {

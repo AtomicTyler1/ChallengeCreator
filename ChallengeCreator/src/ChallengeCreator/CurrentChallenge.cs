@@ -30,4 +30,5 @@ public class CurrentChallenge
     public bool noJumping { get; set; } = false; // If true, you cannot jump. This should also disable ropes and chains according to piano's crippled challenge
     public bool endRunOnCurse { get; set; } = false; // If true, the run will end if you get the curse affliction
     public bool noBackpack { get; set; } = false; // If true, you cannot use a backpack
+    public bool startSkeleton { get; set; } = false; // If true, you start the run as a skeleton (If you have endRunOnCurse on you will not start with curse.)
 }
