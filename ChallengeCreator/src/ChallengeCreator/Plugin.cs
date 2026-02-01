@@ -24,7 +24,7 @@ namespace ChallengeCreator
             { "Itemless", "{'Name': 'Itemless', 'Creators': '@piano.man', 'Notes': 'You are not allowed to use game-breaking glitches.', 'Itemless': true, 'endRunOnCurse': true, 'MinAscent': 0}" },
             { "Crippled", "{'Name': 'Crippled', 'Creators': '@piano.man', 'Notes': 'No game breaking glitches, no scout cannon and no reserve stamina. You cannot jump, sprint or lunge.', 'MinAscent': 0, 'noSprinting': true, 'noJumping': true, 'disallowedItems': [107], 'allowReserveStamina': false}" },
             { "Control-locked", "{'Name': 'Control Locked', 'Creators': '@piano.man', 'Notes': 'No game breaking glitches, no scout cannon.', 'MinAscent': 0, 'controlLockLeftAndRight_Ground': true, 'controlLockForwardAndBackward_Climb': true, 'disallowedItems': [107]}" },
-            { "Tick", "{'Name': 'Tick: Shore -> PEAK', 'Creators': '@piano.man, @atomictyler :3', 'Notes': 'No game breaking glitches, you always have a tick, must get leave no trace badge. This must be solo. This is not the same challenge found on Pianos thread!', 'MinAscent': 7, 'noMultiplayer': true, 'disallowedItems': [47]}" }
+            { "Tick", "{'Name': 'Tick: Shore -> PEAK', 'Creators': '@piano.man, @atomictyler :3', 'Notes': 'No game breaking glitches, you always have a tick, must get leave no trace badge. This must be solo. This is not the same challenge found on Pianos thread!', 'MinAscent': 7, 'noMultiplayer': true, 'disallowedItems': [47], 'alwaysHaveTick': true}" }
         };
 
         private void Awake()

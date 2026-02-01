@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text;
 using HarmonyLib;
 using Photon.Pun;
@@ -12,36 +11,28 @@ namespace ChallengeCreator;
 public static class ChallengeCreatorPatches
 {
     public static CurrentChallenge Challenge => ChallengeReader.currentChallenge;
+    public static HashSet<int> UsedOneTimeUseItems { get; } = new();
 
-    public static List<int> usedOneTimeUseItems = new List<int>();
+    private static bool _usedOneUseInItemless = false;
+    private static bool _characterHasTick = false;
 
-    private static bool usedOneUseInItemless = false;
-
-    private static List<int> itemless_100PercentBlocked = new List<int>()
+    private static readonly HashSet<int> ItemlessBlockedItems = new()
     {
         1,   // ANTI-ROPE SPOOL
         7,   // BANDAGES
-        13,  // BING BONG (13 & 124)
-        124,
-        14,  // BINOCULARS (14 & 125)
-        125,
-        15,  // BUGLE (15, 126, 16, 77)
-        16,
-        77,
-        126,
+        13, 124, // BING BONG
+        14, 125, // BINOCULARS
+        15, 16, 77, 126, // BUGLE
         17,  // CHAIN LAUNCHER
         18,  // PITON
-        23,  // COMPASS (23, 61, 74, 113)
-        61,
-        74,
-        113,
+        23, 61, 74, 113, // COMPASS
         25,  // CURSED SKULL
+        29,  // MED KIT
         30,  // CHECKPOINT FLAG
         31,  // BASKETBALL
         34,  // GUIDEBOOK
         37,  // BALLOON BUNCH
-        42,  // LANTERN (42 & 43)
-        43,
+        42, 43, // LANTERN
         47,  // ANCIENT IDOL
         49,  // SCROLL
         58,  // PANDORA'S LUNCHBOX
@@ -55,74 +46,68 @@ public static class ChallengeCreatorPatches
         70,  // BLOWGUN
         72,  // STONE
         78,  // MEGAPHONE
-        98,  // PARASOL (98 & 164)
-        164,
+        98, 164, // PARASOL
         99,  // FLYING DISC
         100, // RESCUE CLAW
         105, // BALLOON
-        37, // BALLOON BUNCH
         106, // DYNAMITE
         107, // SCOUT CANNON
         109, // TORCH
         115, // THE BOOK OF BONES
         116, // CLIMBING CHALK
         163, // SKULL
-        165,  // SNOWBALL
-        29 // MED KIT
+        165, // SNOWBALL
     };
-
-    private static bool characterHasTick = false;
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(RunManager), nameof(RunManager.StartRun))]
     public static void RunStarted(RunManager __instance)
     {
-        usedOneTimeUseItems.Clear();
-        characterHasTick = false;
-        usedOneUseInItemless = false;
+        UsedOneTimeUseItems.Clear();
+        _characterHasTick = false;
+        _usedOneUseInItemless = false;
         ChallengeReader.GetCurrentChallenge();
         UIUtils.DisplayChallenge(GUIManager.instance);
 
         if (Plugin.debugItemIDs.Value)
         {
-            ItemDatabase database = ItemDatabase.Instance;
-            Dictionary<string, List<int>> itemMap = new Dictionary<string, List<int>>();
-
-            foreach (Item item in database.Objects)
-            {
-                string name = item.GetName().ToUpper();
-                int id = item.itemID;
-
-                if (!itemMap.ContainsKey(name))
-                {
-                    itemMap[name] = new List<int>();
-                }
-                itemMap[name].Add(id);
-            }
-
-            StringBuilder jsonBuilder = new StringBuilder();
-            jsonBuilder.AppendLine("{");
-
-            int count = 0;
-            foreach (var kvp in itemMap)
-            {
-                string ids = string.Join(", ", kvp.Value);
-                jsonBuilder.Append($"  \"{kvp.Key}\": [{ids}]");
-
-                if (++count < itemMap.Count)
-                {
-                    jsonBuilder.AppendLine(",");
-                }
-                else
-                {
-                    jsonBuilder.AppendLine("");
-                }
-            }
-            jsonBuilder.Append("}");
-
-            Plugin.Log.LogInfo(jsonBuilder.ToString());
-            itemMap.Clear();
+            LogItemDatabase();
         }
+    }
+
+    private static void LogItemDatabase()
+    {
+        var database = ItemDatabase.Instance;
+        var itemMap = new Dictionary<string, List<int>>();
+
+        foreach (var item in database.Objects)
+        {
+            var name = item.GetName().ToUpper();
+            var id = item.itemID;
+
+            if (!itemMap.ContainsKey(name))
+                itemMap[name] = new List<int>();
+
+            itemMap[name].Add(id);
+        }
+
+        var jsonBuilder = new StringBuilder();
+        jsonBuilder.AppendLine("{");
+
+        var count = 0;
+        foreach (var kvp in itemMap)
+        {
+            var ids = string.Join(", ", kvp.Value);
+            jsonBuilder.Append($"  \"{kvp.Key}\": [{ids}]");
+
+            if (++count < itemMap.Count)
+                jsonBuilder.AppendLine(",");
+            else
+                jsonBuilder.AppendLine();
+        }
+
+        jsonBuilder.Append("}");
+        Plugin.Log.LogInfo(jsonBuilder.ToString());
     }
 
     [HarmonyPostfix]
@@ -137,8 +122,11 @@ public static class ChallengeCreatorPatches
     public static bool BlockJump(CharacterMovement __instance)
     {
         if (!__instance.character.IsLocal) return true;
-
-        if (Challenge.noJumping) { UIUtils.ChallengeBreakingMessage("You cannot jump!"); return false; }
+        if (Challenge.noJumping)
+        {
+            UIUtils.ChallengeBreakingMessage("You cannot jump!");
+            return false;
+        }
         return true;
     }
 
@@ -147,25 +135,20 @@ public static class ChallengeCreatorPatches
     public static void BlockSprintingPostfix(CharacterMovement __instance)
     {
         if (!__instance.character.IsLocal) return;
+        if (!Challenge.noSprinting) return;
 
-        if (Challenge.noSprinting)
-        {
-            if (__instance.character.data.isSprinting)
-                UIUtils.ChallengeBreakingMessage("You cannot sprint!");
-            __instance.character.data.isSprinting = false;
-            __instance.sprintToggleEnabled = false;
-        }
+        if (__instance.character.data.isSprinting)
+            UIUtils.ChallengeBreakingMessage("You cannot sprint!");
+
+        __instance.character.data.isSprinting = false;
+        __instance.sprintToggleEnabled = false;
     }
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Character), nameof(Character.UseStamina))]
     public static bool BlockStaminaDrain(Character __instance)
     {
-        if (__instance.IsLocal && Challenge.noSprinting && __instance.data.isSprinting)
-        {
-            return false;
-        }
-        return true;
+        return !(__instance.IsLocal && Challenge.noSprinting && __instance.data.isSprinting);
     }
 
     [HarmonyPrefix]
@@ -187,31 +170,18 @@ public static class ChallengeCreatorPatches
     {
         if (!__instance.IsLocal) return;
 
-        bool isClimbing = __instance.data.isClimbing || __instance.data.isRopeClimbing;
+        var isClimbing = __instance.data.isClimbing || __instance.data.isRopeClimbing;
+        var input = __instance.input.movementInput;
 
-        if (!isClimbing)
+        if (isClimbing)
         {
-            if (Challenge.controlLockLeftAndRight_Ground)
-            {
-                __instance.input.movementInput.y = 0f;
-            }
-
-            if (Challenge.controlLockForwardAndBackward_Ground)
-            {
-                __instance.input.movementInput.x = 0f;
-            }
+            if (Challenge.controlLockLeftAndRight_Climb) input.y = 0f;
+            if (Challenge.controlLockForwardAndBackward_Climb) input.x = 0f;
         }
         else
         {
-            if (Challenge.controlLockLeftAndRight_Climb)
-            {
-                __instance.input.movementInput.y = 0f;
-            }
-
-            if (Challenge.controlLockForwardAndBackward_Climb)
-            {
-                __instance.input.movementInput.x = 0f;
-            }
+            if (Challenge.controlLockLeftAndRight_Ground) input.y = 0f;
+            if (Challenge.controlLockForwardAndBackward_Ground) input.x = 0f;
         }
     }
 
@@ -241,133 +211,109 @@ public static class ChallengeCreatorPatches
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(Item), nameof(Item.FinishCastPrimary))]
-    public static void TrackOneUseInItemless(Item __instance)
+    public static void TrackOneTimeUseItems(Item __instance)
     {
         if (!__instance.holderCharacter.IsLocal || !SceneManager.GetActiveScene().name.Contains("Level")) return;
 
-        Vector3 vector = __instance.holderCharacter.data.currentItem.transform.position + Vector3.down * 0.2f;
-        Vector3 linearVelocity = __instance.holderCharacter.data.currentItem.rig.linearVelocity;
+        var itemID = __instance.itemID;
 
-        if (Challenge.Itemless)
+        if (Challenge.oneTimeUseItems.Contains(itemID) && itemID != 32 && itemID != 6)
         {
-            if (__instance.itemID == 32 && __instance.itemID != 6)
+            if (!UsedOneTimeUseItems.Contains(itemID))
             {
-                return;
+                UsedOneTimeUseItems.Add(itemID);
+                Plugin.Log.LogInfo($"Added item {itemID} to used one-time use items list");
             }
-            usedOneUseInItemless = true;
+        }
+
+        if (Challenge.Itemless && itemID != 32 && itemID != 6)
+        {
+            _usedOneUseInItemless = true;
         }
     }
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Item), nameof(Item.StartUsePrimary))]
-    public static bool OneTimeUseItems(Item __instance)
+    public static bool CheckOneTimeUseItems(Item __instance)
     {
-        if (!__instance.holderCharacter.IsLocal || !SceneManager.GetActiveScene().name.Contains("Level")) return true;
-
-        Vector3 vector = __instance.holderCharacter.data.currentItem.transform.position + Vector3.down * 0.2f;
-        Vector3 linearVelocity = __instance.holderCharacter.data.currentItem.rig.linearVelocity;
-
-        if ((__instance.itemID == 6 && !Challenge.noBackpack) || __instance.itemID == 32)
-        {
-            return true;
-        }
-
-        if (Challenge.allowedItemsOnly.Count > 0)
-        {
-            if (!Challenge.allowedItemsOnly.Contains(__instance.itemID))
-            {
-                UIUtils.ChallengeBreakingMessage("The challenge has not added this item id to the allowedItemsOnly!");
-                __instance.holderCharacter.refs.items.DropItemRpc(5f, __instance.holderCharacter.refs.items.currentSelectedSlot.Value, vector, linearVelocity, __instance.holderCharacter.data.currentItem.transform.rotation, __instance.data, false);
-                return false;
-            }
-        }
-
-        if (Challenge.Itemless)
-        {
-            if (itemless_100PercentBlocked.Contains(__instance.itemID) || Challenge.disallowedItems.Contains(__instance.itemID) || (usedOneUseInItemless && (__instance.itemID != 6 || __instance.itemID != 32)))
-            {
-                UIUtils.ChallengeBreakingMessage("You cannot use this item!");
-                __instance.holderCharacter.refs.items.DropItemRpc(5f, __instance.holderCharacter.refs.items.currentSelectedSlot.Value, vector, linearVelocity, __instance.holderCharacter.data.currentItem.transform.rotation, __instance.data, false);
-                return false;
-            }
-        }
-
-        if (Challenge.oneTimeUseItems.Contains(__instance.itemID))
-        {
-            if (usedOneTimeUseItems.Contains(__instance.itemID))
-            {
-                UIUtils.ChallengeBreakingMessage("You have already used this item once!");
-                __instance.holderCharacter.refs.items.DropItemRpc(5f, __instance.holderCharacter.refs.items.currentSelectedSlot.Value, vector, linearVelocity, __instance.holderCharacter.data.currentItem.transform.rotation, __instance.data, false);
-                return false;
-            }
-            else if (__instance.itemID != 32 && __instance.itemID != 6) // Ignore flare for one-time use tracking
-            {
-                usedOneTimeUseItems.Add(__instance.itemID);
-            }
-        }
-        return true;
+        return CheckItemUsage(__instance, true);
     }
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Item), nameof(Item.StartUseSecondary))]
-    public static bool OneTimeUseItemsSecondary(Item __instance)
+    public static bool CheckOneTimeUseItemsSecondary(Item __instance)
     {
-        if (!__instance.holderCharacter.IsLocal || !SceneManager.GetActiveScene().name.Contains("Level")) return true;
+        return CheckItemUsage(__instance, false);
+    }
 
-        Vector3 vector = __instance.holderCharacter.data.currentItem.transform.position + Vector3.down * 0.2f;
-        Vector3 linearVelocity = __instance.holderCharacter.data.currentItem.rig.linearVelocity;
+    private static bool CheckItemUsage(Item item, bool isPrimary)
+    {
+        if (!item.holderCharacter.IsLocal) return true;
+        if (!SceneManager.GetActiveScene().name.Contains("Level")) return true;
 
-        if ((__instance.itemID == 6 && !Challenge.noBackpack) || __instance.itemID == 32 || __instance.itemID == 48)
+        var itemID = item.itemID;
+
+        if (itemID == 6 && !Challenge.noBackpack) return true;
+        if (itemID == 32) return true;
+
+        if (Challenge.allowedItemsOnly.Count > 0 && !Challenge.allowedItemsOnly.Contains(itemID))
         {
-            return true;
-        }
-
-        if (Challenge.allowedItemsOnly.Count > 0)
-        {
-            if (!Challenge.allowedItemsOnly.Contains(__instance.itemID))
-            {
-                UIUtils.ChallengeBreakingMessage("The challenge has not added this item id to the allowedItemsOnly!");
-                __instance.holderCharacter.refs.items.DropItemRpc(5f, __instance.holderCharacter.refs.items.currentSelectedSlot.Value, vector, linearVelocity, __instance.holderCharacter.data.currentItem.transform.rotation, __instance.data, false);
-                return false;
-            }
+            DropItemWithMessage(item, "The challenge has not added this item id to the allowedItemsOnly!");
+            return false;
         }
 
         if (Challenge.Itemless)
         {
-            if (itemless_100PercentBlocked.Contains(__instance.itemID) || Challenge.disallowedItems.Contains(__instance.itemID))
+            if (ItemlessBlockedItems.Contains(itemID) || Challenge.disallowedItems.Contains(itemID))
             {
-                UIUtils.ChallengeBreakingMessage("You cannot use this item!");
-                __instance.holderCharacter.refs.items.DropItemRpc(5f, __instance.holderCharacter.refs.items.currentSelectedSlot.Value, vector, linearVelocity, __instance.holderCharacter.data.currentItem.transform.rotation, __instance.data, false);
+                DropItemWithMessage(item, "You cannot use this item!");
+                return false;
+            }
+
+            if (_usedOneUseInItemless && itemID != 6 && itemID != 32)
+            {
+                DropItemWithMessage(item, "Itemless only allows one item use!");
                 return false;
             }
         }
 
-        if (Challenge.oneTimeUseItems.Contains(__instance.itemID))
+        if (Challenge.oneTimeUseItems.Contains(itemID))
         {
-            if (usedOneTimeUseItems.Contains(__instance.itemID))
+            if (UsedOneTimeUseItems.Contains(itemID))
             {
-                UIUtils.ChallengeBreakingMessage("You have already used this item once!");
-                __instance.holderCharacter.refs.items.DropItemRpc(5f, __instance.holderCharacter.refs.items.currentSelectedSlot.Value, vector, linearVelocity, __instance.holderCharacter.data.currentItem.transform.rotation, __instance.data, false);
+                DropItemWithMessage(item, "You have already used this item once!");
                 return false;
             }
-            else
-            {
-                usedOneTimeUseItems.Add(__instance.itemID);
-            }
         }
+
+        if (Challenge.disallowedItems.Contains(itemID))
+        {
+            DropItemWithMessage(item, "This item is disallowed in the challenge!");
+            return false;
+        }
+
         return true;
     }
 
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(Bugfix), nameof(Bugfix.RPCA_Remove))]
-    public static bool PreventTickRemoval(Bugfix __instance)
+    private static void DropItemWithMessage(Item item, string message)
     {
-        if (Challenge.alwaysHaveTick)
-        {
-            UIUtils.ChallengeBreakingMessage("You cannot remove the tick!");
-            return false;
-        }
-        return true;
+        UIUtils.ChallengeBreakingMessage(message);
+
+        var character = item.holderCharacter;
+        var itemTransform = character.data.currentItem.transform;
+        var dropPosition = itemTransform.position + Vector3.down * 0.2f;
+        var dropVelocity = character.data.currentItem.rig.linearVelocity;
+        var dropRotation = itemTransform.rotation;
+
+        character.refs.items.DropItemRpc(
+            5f,
+            character.refs.items.currentSelectedSlot.Value,
+            dropPosition,
+            dropVelocity,
+            dropRotation,
+            item.data,
+            false
+        );
     }
 
     [HarmonyPrefix]
@@ -375,91 +321,57 @@ public static class ChallengeCreatorPatches
     public static bool ItemPickup(Item __instance, PhotonView characterView)
     {
         if (characterView == null || !SceneManager.GetActiveScene().name.Contains("Level")) return true;
-
         if (characterView.OwnerActorNr != PhotonNetwork.LocalPlayer.ActorNumber) return true;
 
-        if ((__instance.itemID == 6 && !Challenge.noBackpack) || __instance.itemID == 32)
-        {
-            return true;
-        }
+        var itemID = __instance.itemID;
 
-        if (Challenge.alwaysHaveTick && __instance.itemID == 95)
+        if ((itemID == 6 && !Challenge.noBackpack) || itemID == 32) return true;
+
+        if (Challenge.alwaysHaveTick && itemID == 95) return false;
+
+        if (Challenge.allowedItemsOnly.Count > 0 && !Challenge.allowedItemsOnly.Contains(itemID))
         {
+            DenyPickup(__instance, characterView, "The challenge has not added this item id to the allowedItemsOnly list!");
             return false;
         }
 
-        if (Challenge.allowedItemsOnly.Count > 0)
+        if (Challenge.oneTimeUseItems.Contains(itemID))
         {
-            if (!Challenge.allowedItemsOnly.Contains(__instance.itemID))
+            if (UsedOneTimeUseItems.Contains(itemID))
             {
-                UIUtils.ChallengeBreakingMessage("The challenge has not added this item id to the allowedItemsOnly list!");
-                __instance.view.RPC("DenyPickupRPC", characterView.Owner);
+                DenyPickup(__instance, characterView, "You have already used this item once!");
                 return false;
             }
         }
 
         if (Challenge.Itemless)
         {
-            if (itemless_100PercentBlocked.Contains(__instance.itemID))
+            if (ItemlessBlockedItems.Contains(itemID))
             {
-                UIUtils.ChallengeBreakingMessage("You cannot pick this item up in itemless!");
-                __instance.view.RPC("DenyPickupRPC", characterView.Owner);
+                DenyPickup(__instance, characterView, "You cannot pick this item up in itemless!");
                 return false;
             }
 
-            if (usedOneUseInItemless)
+            if (_usedOneUseInItemless)
             {
-                UIUtils.ChallengeBreakingMessage("You cannot pick this item as Itemless only allows 1 item.");
-                __instance.view.RPC("DenyPickupRPC", characterView.Owner);
+                DenyPickup(__instance, characterView, "You cannot pick this item as Itemless only allows 1 item.");
                 return false;
             }
         }
 
-        if (Challenge.disallowedItems.Contains(__instance.itemID))
+        if (Challenge.disallowedItems.Contains(itemID))
         {
-            UIUtils.ChallengeBreakingMessage("This item is disallowed in the challenge!");
-            __instance.view.RPC("DenyPickupRPC", characterView.Owner);
+            DenyPickup(__instance, characterView, "This item is disallowed in the challenge!");
             return false;
         }
+
         return true;
     }
 
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(CharacterAfflictions), nameof(CharacterAfflictions.AddCurse))]
-    public static void RestartRunOnCurse(CharacterAfflictions __instance)
+    private static void DenyPickup(Item item, PhotonView characterView, string message)
     {
-        if (Challenge.endRunOnCurse)
-        {
-            UIUtils.ChallengeBreakingMessage("You got cursed. The run is invalid.");
-        }
-    }
-
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(Character), nameof(Character.FixedUpdate))]
-    public static void ExcessAndTick(Character __instance)
-    {
-        if (!Challenge.allowReserveStamina)
-        {
-            __instance.data.extraStamina = 0f;
-        }
-
-        if (!Challenge.alwaysHaveTick || !__instance.IsLocal || characterHasTick) return;
-
-        if (!SceneManager.GetActiveScene().name.Contains("Level")) return;
-
-        foreach (var bugPair in Bugfix.AllAttachedBugs)
-        {
-            if (bugPair.Value == __instance)
-            {
-                characterHasTick = true;
-                return;
-            }
-        }
-
-        var bugObj = PhotonNetwork.Instantiate("BugfixOnYou", Vector3.zero, Quaternion.identity, 0);
-        bugObj.GetComponent<PhotonView>().RPC("AttachBug", RpcTarget.All, __instance.photonView.ViewID);
-
-        characterHasTick = true;
+        UIUtils.ChallengeBreakingMessage(message);
+        item.view.RPC("DenyPickupRPC", characterView.Owner);
     }
 
     [HarmonyPrefix]
@@ -484,5 +396,55 @@ public static class ChallengeCreatorPatches
             return false;
         }
         return true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(CharacterAfflictions), nameof(CharacterAfflictions.AddCurse))]
+    public static void RestartRunOnCurse(CharacterAfflictions __instance)
+    {
+        if (Challenge.endRunOnCurse)
+        {
+            UIUtils.ChallengeBreakingMessage("You got cursed. The run is invalid.");
+        }
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(Bugfix), nameof(Bugfix.RPCA_Remove))]
+    public static bool PreventTickRemoval(Bugfix __instance)
+    {
+        if (Challenge.alwaysHaveTick)
+        {
+            UIUtils.ChallengeBreakingMessage("You cannot remove the tick!");
+            return false;
+        }
+        return true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(Character), nameof(Character.FixedUpdate))]
+    public static void ExcessAndTick(Character __instance)
+    {
+        if (!__instance.IsLocal) return;
+
+        if (!Challenge.allowReserveStamina)
+        {
+            __instance.data.extraStamina = 0f;
+        }
+
+        if (!Challenge.alwaysHaveTick || _characterHasTick) return;
+        if (!SceneManager.GetActiveScene().name.Contains("Level")) return;
+
+        foreach (var bugPair in Bugfix.AllAttachedBugs)
+        {
+            if (bugPair.Value == __instance)
+            {
+                _characterHasTick = true;
+                return;
+            }
+        }
+
+        var bugObj = PhotonNetwork.Instantiate("BugfixOnYou", Vector3.zero, Quaternion.identity, 0);
+        bugObj.GetComponent<PhotonView>().RPC("AttachBug", RpcTarget.All, __instance.photonView.ViewID);
+        _characterHasTick = true;
     }
 }
