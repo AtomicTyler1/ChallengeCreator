@@ -1,3 +1,10 @@
+# v0.1.3 - Big fix & new UI
+
+- You now start with 25% curse instead of 20% on alwaysSkeleton runs
+- New UI at the end of scout report.
+- New Config to configure the time the UI is onscreen for
+- Fixed all of the control locks not working
+
 # v0.1.2 - Config addition
 
 - Added new `startSkeleton` config. If you have `endRunOnCurse` active, you will not start the game with curse.

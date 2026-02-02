@@ -15,6 +15,7 @@ namespace ChallengeCreator
         public static ConfigEntry<string> challengePreset;
         public static ConfigEntry<bool> debugItemIDs;
         public static ConfigEntry<bool> showMessage;
+        public static ConfigEntry<float> messageOnScreenTime;
 
         public static Harmony harmony = new Harmony(Id);
 
@@ -39,6 +40,7 @@ namespace ChallengeCreator
 
             challengePreset = Config.Bind("General", "challengePreset", "Custom", presetDescription);
             challengeCustom = Config.Bind("General", "challengeCustom", "{}", "Custom challenge JSON. Go to https://atomictyler.dev/#peakPresets to make a config value.");
+            messageOnScreenTime = Config.Bind("General", "Message On Screen Time", 5f, "How long challenge warning messages stay on screen for.");
             showMessage = Config.Bind("General", "Show Challenge Warnings", true, "If true, when you try to do something the challenge deems invalid, along with not doing it a message will appear warning you.");
             debugItemIDs = Config.Bind("General", "Debug Item IDs", false, "If true, item IDs will be printed to the log. Useful for making challenges.");
 

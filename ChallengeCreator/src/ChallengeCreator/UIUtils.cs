@@ -1,8 +1,10 @@
-﻿using Photon.Pun;
+﻿using HarmonyLib;
+using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace ChallengeCreator;
@@ -133,6 +135,18 @@ public class UIUtils
         UnityEngine.Object.Destroy(fullCanvas);
     }
 
+    private static float GetCalculatedWaitTime()
+    {
+        float waitTime = Plugin.messageOnScreenTime.Value;
+
+        if (SceneManager.GetActiveScene().name.Contains("Level"))
+        {
+            waitTime += 5f; // This is to cover up for the blackout on the beach.
+        }
+
+        return waitTime;
+    }
+
     private static IEnumerator FadeChallengeUI(CanvasGroup group, GameObject fullCanvas)
     {
         float elapsed = 0f;
@@ -144,7 +158,7 @@ public class UIUtils
         }
         group.alpha = 1f;
 
-        yield return new WaitForSeconds(8f);
+        yield return new WaitForSeconds(GetCalculatedWaitTime());
 
         elapsed = 0f;
         while (elapsed < 2f)
@@ -155,7 +169,7 @@ public class UIUtils
         }
         group.alpha = 0f;
 
-        UnityEngine.Object.Destroy(fullCanvas);
+        Object.Destroy(fullCanvas);
     }
 
     private static void CreateChallengeText(string objName, string content, float fontSize, TMP_FontAsset font, Transform parent)
@@ -234,5 +248,102 @@ public class UIUtils
         Button.GetComponent<Button>().enabled = true;
 
         Button.Find("Text").GetComponent<TextMeshProUGUI>().text = "Start";
+    }
+
+    public static void EndRunScreen(EndScreen __instance, bool validRun)
+    {
+        Color textColor = __instance.transform.Find("Panel/BG").GetComponent<Image>().color;
+        TMP_FontAsset font = GUIManager.instance.heroDayText.font;
+
+        CurrentChallenge challenge = ChallengeReader.currentChallenge;
+
+        GameObject challengeInfoPanel = new GameObject("ChallengeInfoPanel");
+        challengeInfoPanel.transform.SetParent(__instance.transform);
+
+        RectTransform panelRT = challengeInfoPanel.AddComponent<RectTransform>();
+        panelRT.anchorMin = new Vector2(0f, 1f);
+        panelRT.anchorMax = new Vector2(0f, 1f);
+        panelRT.pivot = new Vector2(0f, 1f);
+        panelRT.anchoredPosition = new Vector2(20f, -20f);
+        panelRT.sizeDelta = new Vector2(400f, 200f);
+
+        VerticalLayoutGroup layout = challengeInfoPanel.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(15, 15, 15, 15);
+        layout.spacing = 10f;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childForceExpandWidth = true;
+
+        ContentSizeFitter sizeFitter = challengeInfoPanel.AddComponent<ContentSizeFitter>();
+        sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        sizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        CreateTextObject("ChallengeTitle", "CHALLENGE INFO", new Color(1f, 0.8f, 0.2f), 20, font, TextAlignmentOptions.Center).transform.SetParent(challengeInfoPanel.transform);
+        CreateTextObject("ChallengeName", $"Name: {challenge.Name}", Color.white, 18, font, TextAlignmentOptions.Left).transform.SetParent(challengeInfoPanel.transform);
+        CreateTextObject("ChallengeCreators", $"Creators: {challenge.Creators}", Color.white, 18, font, TextAlignmentOptions.Left).transform.SetParent(challengeInfoPanel.transform);
+
+        bool isPreset = ChallengeReader.isPreset();
+        Color presetColor = isPreset ? new Color(0.2f, 0.8f, 0.3f) : new Color(0.8f, 0.6f, 0.2f);
+        CreateTextObject("PresetStatus", $"Type: {(isPreset ? "PRESET (OFFICIAL/BUILT-IN)" : "CUSTOM")}", presetColor, 16, font, TextAlignmentOptions.Left).transform.SetParent(challengeInfoPanel.transform);
+
+        Color validColor = validRun ? new Color(0.2f, 1f, 0.2f) : new Color(1f, 0.2f, 0.2f);
+        string validString = validRun ? "VALID RUN" : "INVALID RUN";
+        CreateTextObject("ValidityStatus", $"Status: {validString}", validColor, 16, font, TextAlignmentOptions.Left).transform.SetParent(challengeInfoPanel.transform);
+
+        GameObject divider = new GameObject("Divider");
+        divider.transform.SetParent(challengeInfoPanel.transform);
+        RectTransform dividerRT = divider.AddComponent<RectTransform>();
+        dividerRT.sizeDelta = new Vector2(350f, 2f);
+        Image dividerImg = divider.AddComponent<Image>();
+        dividerImg.color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+        LayoutElement divLayout = divider.AddComponent<LayoutElement>();
+        divLayout.minHeight = 2f;
+
+        if (!string.IsNullOrEmpty(challenge.Notes))
+        {
+            CreateTextObject("NotesTitle", "Notes:", new Color(0.6f, 0.8f, 1f), 16, font, TextAlignmentOptions.Left).transform.SetParent(challengeInfoPanel.transform);
+
+            GameObject notesObj = new GameObject("ChallengeNotes");
+            notesObj.transform.SetParent(challengeInfoPanel.transform);
+
+            TextMeshProUGUI notesTmp = notesObj.AddComponent<TextMeshProUGUI>();
+            notesTmp.text = challenge.Notes;
+            notesTmp.color = new Color(0.9f, 0.9f, 0.9f);
+            notesTmp.font = font;
+            notesTmp.fontSize = 14;
+            notesTmp.alignment = TextAlignmentOptions.TopLeft;
+
+            notesTmp.textWrappingMode = TextWrappingModes.Normal;
+            notesTmp.overflowMode = TextOverflowModes.Overflow;
+
+            LayoutElement notesLayout = notesObj.AddComponent<LayoutElement>();
+            notesLayout.preferredWidth = 350f;
+
+            notesTmp.ForceMeshUpdate();
+        }
+    }
+
+    private static GameObject CreateTextObject(string name, string text, Color color, int fontSize,
+        TMP_FontAsset font, TextAlignmentOptions alignment)
+    {
+        GameObject textObj = new GameObject(name);
+        RectTransform rt = textObj.AddComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(350f, 30f);
+
+        TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.color = color;
+        tmp.font = font;
+        tmp.fontSize = fontSize;
+        tmp.alignment = alignment;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+
+        LayoutElement layout = textObj.AddComponent<LayoutElement>();
+        layout.preferredHeight = 30f;
+        layout.minHeight = 20f;
+
+        return textObj;
     }
 }

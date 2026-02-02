@@ -2,6 +2,7 @@
 using System.Text;
 using HarmonyLib;
 using Photon.Pun;
+using Photon.Pun.Demo.PunBasics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -15,6 +16,8 @@ public static class ChallengeCreatorPatches
 
     private static bool _usedOneUseInItemless = false;
     private static bool _characterHasTick = false;
+
+    public static bool runValid = true;
 
     private static readonly HashSet<int> ItemlessBlockedItems = new()
     {
@@ -66,6 +69,7 @@ public static class ChallengeCreatorPatches
         UsedOneTimeUseItems.Clear();
         _characterHasTick = false;
         _usedOneUseInItemless = false;
+        runValid = true;
         ChallengeReader.GetCurrentChallenge();
         UIUtils.DisplayChallenge(GUIManager.instance);
 
@@ -74,7 +78,6 @@ public static class ChallengeCreatorPatches
             LogItemDatabase();
         }
     }
-
     private static void LogItemDatabase()
     {
         var database = ItemDatabase.Instance;
@@ -144,7 +147,7 @@ public static class ChallengeCreatorPatches
             {
                 return;
             }
-            __instance.refs.afflictions.AddStatus(CharacterAfflictions.STATUSTYPE.Curse, 0.2f);
+            __instance.refs.afflictions.AddStatus(CharacterAfflictions.STATUSTYPE.Curse, 0.25f);
         }
     }
 
@@ -189,6 +192,7 @@ public static class ChallengeCreatorPatches
         if (!__instance.IsLocal) return;
 
         var isClimbing = __instance.data.isClimbing || __instance.data.isRopeClimbing;
+
         var input = __instance.input.movementInput;
 
         if (isClimbing)
@@ -201,6 +205,7 @@ public static class ChallengeCreatorPatches
             if (Challenge.controlLockLeftAndRight_Ground) input.y = 0f;
             if (Challenge.controlLockForwardAndBackward_Ground) input.x = 0f;
         }
+        __instance.input.movementInput = input;
     }
 
     [HarmonyPrefix]
@@ -422,6 +427,7 @@ public static class ChallengeCreatorPatches
     {
         if (Challenge.endRunOnCurse)
         {
+            runValid = false;
             UIUtils.ChallengeBreakingMessage("You got cursed. The run is invalid.");
         }
     }
@@ -464,5 +470,14 @@ public static class ChallengeCreatorPatches
         var bugObj = PhotonNetwork.Instantiate("BugfixOnYou", Vector3.zero, Quaternion.identity, 0);
         bugObj.GetComponent<PhotonView>().RPC("AttachBug", RpcTarget.All, __instance.photonView.ViewID);
         _characterHasTick = true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(EndScreen), nameof(EndScreen.Start))]
+    public static void ClearOnRunEnd(EndScreen __instance)
+    {
+        var stats = Character.localCharacter.refs.stats;
+        if (!stats.won && !stats.somebodyElseWon && stats.lost) { runValid = false; }
+        UIUtils.EndRunScreen(__instance, runValid);
     }
 }

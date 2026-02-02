@@ -6,6 +6,11 @@ namespace ChallengeCreator;
 internal class ChallengeReader
 {
     public static CurrentChallenge currentChallenge = new CurrentChallenge();
+    public static bool isPreset()
+    {
+        return Plugin.challengePreset.Value != "Custom";
+    }
+
     public static void GetCurrentChallenge()
     {
         bool customPreset = Plugin.challengePreset.Value == "Custom";
