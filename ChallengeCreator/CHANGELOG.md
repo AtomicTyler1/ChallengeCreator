@@ -1,3 +1,14 @@
+# v0.1.5 - Fix
+
+- I forgot to update the description, no mod change.
+
+# v0.1.4 - New additions
+
+- Added `noLuggages` modifier
+- Added `noAncientStatues` modifier
+- Added `noCampfireHealAndMorale` modifier, this will make the campfire not give you moral and not heal you.
+- Added `temporaryStatusesDecay` modifier, all status affects/afflictions that would normally decay wont, this means **drowsy**, cold, heat and poison wont decay and all others, they require items.
+- Added `requiredBadges` modifier, the website will help you with using this.
 # v0.1.3 - Big fix & new UI
 
 - You now start with 25% curse instead of 20% on alwaysSkeleton runs

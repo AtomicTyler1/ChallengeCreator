@@ -56,6 +56,11 @@ public bool noJumping { get; set; } = false; // If true, you cannot jump. This s
 public bool endRunOnCurse { get; set; } = false; // If true, the run will end if you get the curse affliction
 public bool noBackpack { get; set; } = false; // If true, you cannot use a backpack
 public bool startSkeleton { get; set; } = false; // If true, you start the run as a skeleton (If you have endRunOnCurse on you will not start with curse.)
+public bool noLuggages { get; set; } = false; // If true, you cannot open luggages.
+public bool noAncientStatues { get; set; } = false; // If true, you cannot interact with ancient statues at all.
+public bool noCampfireHealAndMorale { get; set; } = false; // If true, you cannot heal or gain morale from campfires.
+public bool temporaryStatusesDecay { get; set; } = true; // If true, the statuses that normally decay will decay like cold, head and poison.
+public List<int> requiredBadges { get; set; } = new List<int>(); // List of badge IDs that are required to have a valid run
 ```
 
 </details>

@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Text;
-using HarmonyLib;
+﻿using HarmonyLib;
 using Photon.Pun;
 using Photon.Pun.Demo.PunBasics;
+using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TextCore.Text;
+using Zorro.Core;
+using static CharacterAfflictions;
 
 namespace ChallengeCreator;
 
@@ -13,6 +17,7 @@ public static class ChallengeCreatorPatches
 {
     public static CurrentChallenge Challenge => ChallengeReader.currentChallenge;
     public static HashSet<int> UsedOneTimeUseItems { get; } = new();
+    public static List<ACHIEVEMENTTYPE> gainedAchievements = new();
 
     private static bool _usedOneUseInItemless = false;
     private static bool _characterHasTick = false;
@@ -77,6 +82,10 @@ public static class ChallengeCreatorPatches
         {
             LogItemDatabase();
         }
+        if (Plugin.debugAchievementTypes.Value)
+        {
+            LogBadgeTypes();
+        }
     }
     private static void LogItemDatabase()
     {
@@ -111,6 +120,37 @@ public static class ChallengeCreatorPatches
 
         jsonBuilder.Append("}");
         Plugin.Log.LogInfo(jsonBuilder.ToString());
+    }
+
+    private static void LogBadgeTypes()
+    {
+        var badgeMap = new Dictionary<string, int>();
+
+        foreach (ACHIEVEMENTTYPE type in Enum.GetValues(typeof(ACHIEVEMENTTYPE)))
+        {
+            string name = type.ToString().ToUpper();
+
+            int id = (int)type;
+
+            badgeMap[name] = id;
+        }
+
+        var jsonBuilder = new StringBuilder();
+        jsonBuilder.AppendLine("{");
+
+        var count = 0;
+        foreach (var kvp in badgeMap)
+        {
+            jsonBuilder.Append($"  \"{kvp.Key}\": {kvp.Value}");
+
+            if (++count < badgeMap.Count)
+                jsonBuilder.AppendLine(",");
+            else
+                jsonBuilder.AppendLine();
+        }
+
+        jsonBuilder.Append("}");
+        Plugin.Log.LogInfo(badgeMap.Count > 0 ? jsonBuilder.ToString() : "{}");
     }
 
     [HarmonyPostfix]
@@ -478,6 +518,96 @@ public static class ChallengeCreatorPatches
     {
         var stats = Character.localCharacter.refs.stats;
         if (!stats.won && !stats.somebodyElseWon && stats.lost) { runValid = false; }
+        if (Challenge.requiredBadges.Count > 0)
+        {
+            foreach (var requiredBadge in Challenge.requiredBadges)
+            {
+                if (!gainedAchievements.Contains((ACHIEVEMENTTYPE)requiredBadge))
+                {
+                    runValid = false;
+                    UIUtils.ChallengeBreakingMessage($"You did not earn the required badge: {(ACHIEVEMENTTYPE)requiredBadge}");
+                }
+            }
+        }
         UIUtils.EndRunScreen(__instance, runValid);
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(AchievementManager), nameof(AchievementManager.ThrowAchievement))]
+    public static void GainBadge(AchievementManager __instance, ACHIEVEMENTTYPE type)
+    {
+        if (!gainedAchievements.Contains(type) && Challenge.requiredBadges.Contains((int)type))
+        {
+            gainedAchievements.Add(type);
+        }
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(Luggage), nameof(Luggage.OpenLuggageRPC))]
+    public static bool BlockLuggage(Luggage __instance)
+    {
+        if (Challenge.noLuggages)
+        {
+            UIUtils.ChallengeBreakingMessage("You cannot open luggages!");
+            return false;
+        }
+        return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(RespawnChest), nameof(RespawnChest.GetInteractionText))]
+    public static bool AncientStatueText(RespawnChest __instance, ref string __result)
+    {
+        if (Challenge.noAncientStatues)
+        {
+            __result = "CANNOT USE";
+            return false;
+        }
+        return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(RespawnChest), nameof(RespawnChest.Interact_CastFinished))]
+    public static bool BlockAncientStatue(RespawnChest __instance)
+    {
+        if (Challenge.noAncientStatues)
+        {
+            UIUtils.ChallengeBreakingMessage("You cannot interact with ancient statues!");
+            return false;
+        }
+        return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(Campfire), nameof(Campfire.Light_Rpc))]
+    public static void BlockCampfireHeal(Campfire __instance)
+    {
+        if (Challenge.noCampfireHealAndMorale)
+        {
+            var radius = __instance.moraleBoostRadius;
+            radius = 0f;
+            __instance.moraleBoostRadius = radius;
+        }
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(CharacterAfflictions), nameof(CharacterAfflictions.UpdateNormalStatuses))]
+    public static bool BlockRemovalOfStatuses(CharacterAfflictions __instance)
+    {
+        if (Challenge.temporaryStatusesDecay)
+        {
+            // I need to make sure I add the statuses that would normally be added due to returning the prefix early.
+            if (Ascents.isNightCold && (bool)Singleton<MountainProgressHandler>.Instance && Singleton<MountainProgressHandler>.Instance.maxProgressPointReached < 3 && DayNightManager.instance != null && DayNightManager.instance.isDay < 0.5f)
+            {
+                __instance.AddStatus(STATUSTYPE.Cold, Time.deltaTime * (1f - DayNightManager.instance.isDay) * Ascents.nightColdRate);
+            }
+
+            if (__instance.character.data.fullyConscious)
+            {
+                __instance.AddStatus(STATUSTYPE.Hunger, Time.deltaTime * __instance.hungerPerSecond * Ascents.hungerRateMultiplier);
+            }
+            return false;
+        }
+        return true;
     }
 }

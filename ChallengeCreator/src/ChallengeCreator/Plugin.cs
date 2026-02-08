@@ -14,6 +14,7 @@ namespace ChallengeCreator
         public static ConfigEntry<string> challengeCustom;
         public static ConfigEntry<string> challengePreset;
         public static ConfigEntry<bool> debugItemIDs;
+        public static ConfigEntry<bool> debugAchievementTypes;
         public static ConfigEntry<bool> showMessage;
         public static ConfigEntry<float> messageOnScreenTime;
 
@@ -43,6 +44,7 @@ namespace ChallengeCreator
             messageOnScreenTime = Config.Bind("General", "Message On Screen Time", 5f, "How long challenge warning messages stay on screen for.");
             showMessage = Config.Bind("General", "Show Challenge Warnings", true, "If true, when you try to do something the challenge deems invalid, along with not doing it a message will appear warning you.");
             debugItemIDs = Config.Bind("General", "Debug Item IDs", false, "If true, item IDs will be printed to the log. Useful for making challenges.");
+            debugAchievementTypes = Config.Bind("General", "Debug Achievement Types", false, "If true, achievement types will be printed to the log. Useful for making challenges.");
 
             harmony.PatchAll();
         }
