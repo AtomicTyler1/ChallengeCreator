@@ -75,18 +75,16 @@ public static class ChallengeCreatorPatches
         _characterHasTick = false;
         _usedOneUseInItemless = false;
         runValid = true;
-        ChallengeReader.GetCurrentChallenge();
-        UIUtils.DisplayChallenge(GUIManager.instance);
 
-        if (Plugin.debugItemIDs.Value)
-        {
-            LogItemDatabase();
-        }
-        if (Plugin.debugAchievementTypes.Value)
-        {
-            LogBadgeTypes();
-        }
+        __instance.StartCoroutine(ChallengeReader.GetCurrentChallengeRoutine(() => {
+            UIUtils.DisplayChallenge(GUIManager.instance);
+            Plugin.Log.LogInfo("Challenge display updated after download.");
+        }));
+
+        if (Plugin.debugItemIDs.Value) LogItemDatabase();
+        if (Plugin.debugAchievementTypes.Value) LogBadgeTypes();
     }
+
     private static void LogItemDatabase()
     {
         var database = ItemDatabase.Instance;
@@ -594,7 +592,7 @@ public static class ChallengeCreatorPatches
     [HarmonyPatch(typeof(CharacterAfflictions), nameof(CharacterAfflictions.UpdateNormalStatuses))]
     public static bool BlockRemovalOfStatuses(CharacterAfflictions __instance)
     {
-        if (Challenge.temporaryStatusesDecay)
+        if (!Challenge.temporaryStatusesDecay)
         {
             // I need to make sure I add the statuses that would normally be added due to returning the prefix early.
             if (Ascents.isNightCold && (bool)Singleton<MountainProgressHandler>.Instance && Singleton<MountainProgressHandler>.Instance.maxProgressPointReached < 3 && DayNightManager.instance != null && DayNightManager.instance.isDay < 0.5f)

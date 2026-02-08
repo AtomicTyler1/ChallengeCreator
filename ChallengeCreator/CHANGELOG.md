@@ -1,3 +1,13 @@
+# v0.1.7 - Share codes!
+
+- You can now create share codes via the website!
+- To use a share code, simply paste it in the config.
+- A sharecode looks like `CHALLENGE_xxxxxx`
+
+# v0.1.6 - Fix
+
+- I forgot to inverse a bool operation.
+
 # v0.1.5 - Fix
 
 - I forgot to update the description, no mod change.
