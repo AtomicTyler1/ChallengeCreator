@@ -1,3 +1,8 @@
+# v0.1.8 - 2 new configs
+
+- Added cannotSeeStaminaBar
+- Added alwaysNearSighted
+
 # v0.1.7 - Share codes!
 
 - You can now create share codes via the website!

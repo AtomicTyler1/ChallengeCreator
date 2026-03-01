@@ -36,4 +36,6 @@ public class CurrentChallenge
     public bool noCampfireHealAndMorale { get; set; } = false; // If true, you cannot heal or gain morale from campfires.
     public bool temporaryStatusesDecay { get; set; } = true; // If true, the statuses that normally decay will decay like cold, head and poison.
     public List<int> requiredBadges { get; set; } = new List<int>(); // List of badge IDs that are required to have a valid run
+    public bool cannotSeeStaminaBar { get; set; } = false; // If true, you have the mushroom effect thingy on your stamina bar.
+    public bool alwaysNearSighted { get; set; } = false; // If true, you will always be near sighted
 }

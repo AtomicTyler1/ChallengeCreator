@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using Peak.Afflictions;
 using Photon.Pun;
 using Photon.Pun.Demo.PunBasics;
 using System;
@@ -484,17 +485,35 @@ public static class ChallengeCreatorPatches
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(Character), nameof(Character.FixedUpdate))]
-    public static void ExcessAndTick(Character __instance)
+    public static void ChracterFixedUpdte(Character __instance)
     {
         if (!__instance.IsLocal) return;
+
+        var scene = SceneManager.GetActiveScene().name;
 
         if (!Challenge.allowReserveStamina)
         {
             __instance.data.extraStamina = 0f;
         }
 
+        if (Challenge.cannotSeeStaminaBar && scene.Contains("Level"))
+        {
+            GUIManager.instance.staminaCanvasGroup.alpha = 0f;
+            GUIManager.instance.mushroomsCanvasGroup.alpha = 1f;
+            GUIManager.instance.mushroomsCanvasGroup.gameObject.SetActive(true);
+        }
+
+        if (Challenge.alwaysNearSighted && !__instance.refs.afflictions.HasAfflictionType(Affliction.AfflictionType.Blind, out Affliction temp) && scene.Contains("Level"))
+        {
+            Affliction_Blind affliction4 = new Affliction_Blind
+            {
+                totalTime = 10f
+            };
+            __instance.refs.afflictions.AddAffliction(affliction4);
+        }
+
         if (!Challenge.alwaysHaveTick || _characterHasTick) return;
-        if (!SceneManager.GetActiveScene().name.Contains("Level")) return;
+        if (!scene.Contains("Level")) return;
 
         foreach (var bugPair in Bugfix.AllAttachedBugs)
         {
