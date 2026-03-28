@@ -1,3 +1,10 @@
+# 1.0.0 - FULL RELEASE
+
+- Added an in-game browser for challenge codes
+- Added networking so the host can share the same code between clients
+- Added automatic updating between codes
+- Rewrite backend parts
+
 # v0.1.9 - 2 new configs
 
 - Added disableHunger

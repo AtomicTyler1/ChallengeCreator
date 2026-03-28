@@ -9,6 +9,10 @@ of or hard to pull off in vanilla peak.
 
 Some elements will not function as the challenge maker intended with some features disabled.
 
+# This mod changes the main menu screen!
+
+This mod adds a new in-game challenge browser!
+
 ## How do I create my own chllange?
 
 I have tried my best to make a user friendly tool on my website!
