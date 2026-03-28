@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using ChallengeCreator.Networking;
+using HarmonyLib;
 using Peak.Afflictions;
 using Photon.Pun;
 using Photon.Pun.Demo.PunBasics;
@@ -69,6 +70,13 @@ public static class ChallengeCreatorPatches
     };
 
     [HarmonyPostfix]
+    [HarmonyPatch(typeof(MainMenu), nameof(MainMenu.Start))]
+    public static void CreateMMUI(MainMenu __instance)
+    {
+        UIUtils.CreateMainMenuGUI(__instance);
+    }
+
+    [HarmonyPostfix]
     [HarmonyPatch(typeof(RunManager), nameof(RunManager.StartRun))]
     public static void RunStarted(RunManager __instance)
     {
@@ -77,10 +85,35 @@ public static class ChallengeCreatorPatches
         _usedOneUseInItemless = false;
         runValid = true;
 
-        __instance.StartCoroutine(ChallengeReader.GetCurrentChallengeRoutine(() => {
-            UIUtils.DisplayChallenge(GUIManager.instance);
-            Plugin.Log.LogInfo("Challenge display updated after download.");
-        }));
+        if (ChallengeNetworker.Instance == null)
+        {
+            GameObject netObj = new GameObject("ChallengeNetworker");
+            var view = netObj.AddComponent<PhotonView>();
+            view.ViewID = 1763;
+            netObj.AddComponent<ChallengeNetworker>();
+        }
+
+        if (PhotonNetwork.IsMasterClient)
+        {
+            __instance.StartCoroutine(ChallengeReader.GetCurrentChallengeRoutine(() => {
+                string json = ChallengeReader.GetCurrentChallengeJson();
+                ChallengeNetworker.Instance?.photonView.RPC("RPC_ReceiveSync", RpcTarget.Others, json);
+
+                if (Challenge.crab)
+                {
+                    Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
+                }
+
+                UIUtils.DisplayChallenge(GUIManager.instance);
+            }));
+        }
+        else
+        {
+            ChallengeNetworker.Instance?.RequestConfigFromHost();
+            UIUtils.WarningMessage("Requesting challenge configuration from the host...");
+        }
+
+        UIUtils.DisplayChallenge(GUIManager.instance);
 
         if (Plugin.debugItemIDs.Value) LogItemDatabase();
         if (Plugin.debugAchievementTypes.Value) LogBadgeTypes();
@@ -177,6 +210,12 @@ public static class ChallengeCreatorPatches
     public static void StartAsSkeleton(Character __instance)
     {
         if (!__instance.IsLocal) return;
+
+        if (Challenge.crab)
+        {
+            Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
+        }
+
         if (Challenge.startSkeleton)
         {
             __instance.data.SetSkeleton(true);
@@ -611,6 +650,11 @@ public static class ChallengeCreatorPatches
     [HarmonyPatch(typeof(CharacterAfflictions), nameof(CharacterAfflictions.UpdateNormalStatuses))]
     public static bool BlockRemovalOfStatuses(CharacterAfflictions __instance)
     {
+        if (Challenge.disableHunger)
+        {
+            __instance.hungerPerSecond = 0f;
+        }
+
         if (!Challenge.temporaryStatusesDecay)
         {
             // I need to make sure I add the statuses that would normally be added due to returning the prefix early.

@@ -3,6 +3,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace ChallengeCreator
 {
@@ -23,10 +24,11 @@ namespace ChallengeCreator
         public static Dictionary<string, string> presets = new Dictionary<string, string>()
         {
             { "Custom", "" },
-            { "Itemless", "{'Name': 'Itemless', 'Creators': '@piano.man', 'Notes': 'You are not allowed to use game-breaking glitches.', 'Itemless': true, 'endRunOnCurse': true, 'MinAscent': 0}" },
-            { "Crippled", "{'Name': 'Crippled', 'Creators': '@piano.man', 'Notes': 'No game breaking glitches, no scout cannon and no reserve stamina. You cannot jump, sprint or lunge.', 'MinAscent': 0, 'noSprinting': true, 'noJumping': true, 'disallowedItems': [107], 'allowReserveStamina': false}" },
-            { "Control-locked", "{'Name': 'Control Locked', 'Creators': '@piano.man', 'Notes': 'No game breaking glitches, no scout cannon.', 'MinAscent': 0, 'controlLockLeftAndRight_Ground': true, 'controlLockForwardAndBackward_Climb': true, 'disallowedItems': [107]}" },
-            { "Tick", "{'Name': 'Tick: Shore -> PEAK', 'Creators': '@piano.man, @atomictyler :3', 'Notes': 'No game breaking glitches, you always have a tick, must get leave no trace badge. This must be solo. This is not the same challenge found on Pianos thread!', 'MinAscent': 7, 'noMultiplayer': true, 'disallowedItems': [47], 'alwaysHaveTick': true}" }
+            { "Itemless", "{'Name': 'Itemless', 'Creators': 'PEAK Community', 'Notes': 'You are not allowed to use game-breaking glitches.', 'Itemless': true, 'endRunOnCurse': true, 'MinAscent': 0}" },
+            { "Crippled", "{'Name': 'Crippled', 'Creators': 'PEAK Community', 'Notes': 'No game breaking glitches, no scout cannon and no reserve stamina. You cannot jump, sprint or lunge.', 'MinAscent': 0, 'noSprinting': true, 'noJumping': true, 'disallowedItems': [107], 'allowReserveStamina': false}" },
+            { "Control-locked", "{'Name': 'Control Locked', 'Creators': 'PEAK Community', 'Notes': 'No game breaking glitches, no scout cannon.', 'MinAscent': 0, 'controlLockLeftAndRight_Ground': true, 'controlLockForwardAndBackward_Climb': true, 'disallowedItems': [107]}" },
+            { "Tick", "{'Name': 'Tick: Shore -> PEAK', 'Creators': 'PEAK Community', 'Notes': 'No game breaking glitches, you always have a tick, must get leave no trace badge. This must be solo.', 'MinAscent': 7, 'noMultiplayer': true, 'disallowedItems': [47], 'alwaysHaveTick': true}" },
+            { "Low-Stamina", "{'Name': 'Crab - 2.5% stamina', 'Creators': 'PEAK Community', 'Notes': 'You do not gain hunger, you have 97.5% of your stamina being filled with the secret crab status', 'disallowedItems': [58], 'crab': true, 'disableHunger': true}" }
         };
 
         private void Awake()
@@ -45,6 +47,13 @@ namespace ChallengeCreator
             showMessage = Config.Bind("General", "Show Challenge Warnings", true, "If true, when you try to do something the challenge deems invalid, along with not doing it a message will appear warning you.");
             debugItemIDs = Config.Bind("General", "Debug Item IDs", false, "If true, item IDs will be printed to the log. Useful for making challenges.");
             debugAchievementTypes = Config.Bind("General", "Debug Achievement Types", false, "If true, achievement types will be printed to the log. Useful for making challenges.");
+
+            string[] resourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+            Log.LogInfo($"Found {resourceNames.Length} embedded resources:");
+            foreach (string resource in resourceNames)
+            {
+                Log.LogInfo($"> {resource}");
+            }
 
             harmony.PatchAll();
         }

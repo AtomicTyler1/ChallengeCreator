@@ -1,7 +1,9 @@
 ﻿using HarmonyLib;
 using Photon.Pun;
+using Steamworks;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,6 +12,10 @@ using UnityEngine.UI;
 namespace ChallengeCreator;
 public class UIUtils
 {
+    private static Sprite ChallengeCreatorMenuIcon = null;
+
+    public static TMP_FontAsset gameFont;
+
     public static void DisplayChallenge(GUIManager guiManager)
     {
         var font = guiManager.heroDayText.font;
@@ -53,9 +59,9 @@ public class UIUtils
 
     private static HashSet<string> activeBreakingMessages = new HashSet<string>();
 
-    public static void ChallengeBreakingMessage(string message)
+    public static void ChallengeBreakingMessage(string message, bool ignoreUserConfig = false)
     {
-        if (!Plugin.showMessage.Value) return;
+        if (!Plugin.showMessage.Value && !ignoreUserConfig) return;
 
         if (activeBreakingMessages.Contains(message)) return;
 
@@ -106,6 +112,60 @@ public class UIUtils
 
         tmp.color = new Color(1f, 0.2f, 0.2f);
         tmp.outlineColor = new Color(0.1f, 0f, 0f);
+        tmp.outlineWidth = 0.08f;
+
+        guiManager.StartCoroutine(FadeAlertUI(group, canvasObj, message));
+    }
+
+    public static void WarningMessage(string message)
+    {
+        var guiManager = GameObject.FindFirstObjectByType<GUIManager>();
+        if (guiManager == null) return;
+
+        var font = guiManager.heroDayText.font;
+
+        activeBreakingMessages.Add(message);
+
+        GameObject canvasObj = new GameObject("Warning_Canvas");
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        GameObject container = new GameObject("WarningMessageContainer");
+        container.transform.SetParent(canvasObj.transform, false);
+
+        CanvasGroup group = container.AddComponent<CanvasGroup>();
+        group.alpha = 0f;
+
+        RectTransform rect = container.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0, 0);
+        rect.anchorMax = new Vector2(1, 0);
+        rect.pivot = new Vector2(0, 0);
+        rect.anchoredPosition = new Vector2(20, 20);
+        rect.sizeDelta = new Vector2(-40, 60);
+
+        GameObject textObj = new GameObject("WarningText");
+        textObj.transform.SetParent(container.transform, false);
+
+        RectTransform textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+
+        TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
+        tmp.text = message.ToUpper();
+        tmp.font = font;
+        tmp.fontSize = 28;
+        tmp.alignment = TextAlignmentOptions.BottomLeft;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Ellipsis;
+
+        tmp.color = new Color(1f, 0.9f, 0.1f);
+        tmp.outlineColor = new Color(0.2f, 0.15f, 0f);
         tmp.outlineWidth = 0.08f;
 
         guiManager.StartCoroutine(FadeAlertUI(group, canvasObj, message));
@@ -345,5 +405,78 @@ public class UIUtils
         layout.minHeight = 20f;
 
         return textObj;
+    }
+
+    private static Sprite GetIconFromEmbeddedResource(string resourcePath)
+    {
+        try
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+
+            using (var stream = assembly.GetManifestResourceStream(resourcePath))
+            {
+                if (stream == null)
+                {
+                    Plugin.Log.LogError($"Resource not found: {resourcePath}");
+                    return null;
+                }
+
+                byte[] buffer = new byte[stream.Length];
+                stream.Read(buffer, 0, buffer.Length);
+
+                Texture2D texture = new Texture2D(2, 2);
+                if (ImageConversion.LoadImage(texture, buffer))
+                {
+                    return Sprite.Create(
+                        texture,
+                        new Rect(0, 0, texture.width, texture.height),
+                        new Vector2(0.5f, 0.5f)
+                    );
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Plugin.Log.LogError($"Error loading sprite from resource: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    public static void CreateMainMenuGUI(MainMenu __instance)
+    {
+        var buttons = __instance.transform.Find("Canvas/MainPage/Menu/Buttons");
+        var credits = buttons.Find("Button_Credits");
+        var quit = buttons.Find("Button_Quit");
+
+        var mainPage = __instance.transform.Find("Canvas/MainPage");
+
+        var clone = GameObject.Instantiate(credits);
+        clone.name = "Button_Challenges";
+        clone.parent = buttons;
+        clone.localPosition = credits.localPosition + new Vector3(-20, -45, 0);
+        clone.localScale = new Vector3(0.92f, 0.8f, 0.8f);
+        clone.localRotation = Quaternion.Euler(0f, 0f, 6.2271f);
+
+        buttons.Find("Button_Discord").localPosition += new Vector3(860, 460, 0);
+
+        quit.localPosition += new Vector3(35f, 0f, 0f);
+        quit.localScale = new Vector3(-0.8f, 0.8f, 0.8f);
+        quit.localRotation = Quaternion.Euler(0f, 0f, 354.2469f);
+
+        quit.Find("Hinge/Text").localScale = new Vector3(-1f, 1f, 1f);
+
+        clone.Find("Hinge/Text").GetComponent<LocalizedText>().enabled = false;
+        clone.Find("Hinge/Text").GetComponent<TextMeshProUGUI>().text = "CHALLENGES";
+
+        gameFont = clone.Find("Hinge/Text").GetComponent<TextMeshProUGUI>().font;
+
+        var browserObj = new GameObject("ChallengeBrowser");
+        var browser = browserObj.AddComponent<ChallengeBrowser>();
+
+        clone.GetComponent<Button>().onClick.AddListener(() => {
+            __instance.transform.Find("Canvas/MainPage").gameObject.SetActive(false);
+            browser.Show(__instance);
+        });
     }
 }

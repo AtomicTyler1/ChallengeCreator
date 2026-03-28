@@ -63,6 +63,8 @@ public bool temporaryStatusesDecay { get; set; } = true; // If true, the statuse
 public List<int> requiredBadges { get; set; } = new List<int>(); // List of badge IDs that are required to have a valid run
 public bool cannotSeeStaminaBar { get; set; } = false; // If true, you have the mushroom effect thingy on your stamina bar.
 public bool alwaysNearSighted { get; set; } = false; // If true, you will always be near sighted
+public bool disableHunger { get; set; } = false; // If true, hunger will be disabled.
+public bool crab { get; set; } = false; // If true, you start off with 97.5% of the crab status.
 ```
 
 </details>

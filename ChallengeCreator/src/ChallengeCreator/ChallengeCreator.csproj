@@ -4,7 +4,15 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>com.atomic.challengecreator</AssemblyName>
     <AssemblyTitle>ChallengeCreator</AssemblyTitle>
-    <Version>0.1.8</Version>
+    <Version>0.1.9</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="ChallengeCreatorMenuIcon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="ChallengeCreatorMenuIcon.png" />
+  </ItemGroup>
 
 </Project>

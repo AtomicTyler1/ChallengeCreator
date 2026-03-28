@@ -1,3 +1,10 @@
+# v0.1.9 - 2 new configs
+
+- Added disableHunger
+- Added crab
+
+> Added a new preset to include these two. Changed creators to `PEAK Community`.
+
 # v0.1.8 - 2 new configs
 
 - Added cannotSeeStaminaBar
