@@ -99,11 +99,6 @@ public static class ChallengeCreatorPatches
                 string json = ChallengeReader.GetCurrentChallengeJson();
                 ChallengeNetworker.Instance?.photonView.RPC("RPC_ReceiveSync", RpcTarget.Others, json);
 
-                if (Challenge.crab)
-                {
-                    Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
-                }
-
                 UIUtils.DisplayChallenge(GUIManager.instance);
             }));
         }

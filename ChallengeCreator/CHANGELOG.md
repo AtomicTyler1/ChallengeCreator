@@ -1,3 +1,7 @@
+# 1.0.1 - CRAB 97.5% FIX
+
+- The crab modifier has been fixed.
+
 # 1.0.0 - FULL RELEASE
 
 - Added an in-game browser for challenge codes
