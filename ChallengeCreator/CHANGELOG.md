@@ -1,8 +1,13 @@
-# 1.0.1 - CRAB 97.5% FIX
+# v1.0.2 - Bug fix
+
+- Fixed startSkeleton not working
+- Fixed the run details in the beginning showing twice.
+
+# v1.0.1 - CRAB 97.5% FIX
 
 - The crab modifier has been fixed.
 
-# 1.0.0 - FULL RELEASE
+# v1.0.0 - FULL RELEASE
 
 - Added an in-game browser for challenge codes
 - Added networking so the host can share the same code between clients

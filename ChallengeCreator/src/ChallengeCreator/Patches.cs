@@ -108,8 +108,6 @@ public static class ChallengeCreatorPatches
             UIUtils.WarningMessage("Requesting challenge configuration from the host...");
         }
 
-        UIUtils.DisplayChallenge(GUIManager.instance);
-
         if (Plugin.debugItemIDs.Value) LogItemDatabase();
         if (Plugin.debugAchievementTypes.Value) LogBadgeTypes();
     }
@@ -202,7 +200,7 @@ public static class ChallengeCreatorPatches
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(Character), nameof(Character.Start))]
-    public static void StartAsSkeleton(Character __instance)
+    public static void GiveCrab(Character __instance)
     {
         if (!__instance.IsLocal) return;
 
@@ -210,12 +208,19 @@ public static class ChallengeCreatorPatches
         {
             Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
         }
+    }
 
-        if (Challenge.startSkeleton)
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(Character), nameof(Character.Update))]
+    public static void GiveSkeleton(Character __instance)
+    {
+        if (!__instance.IsLocal) return;
+
+        if (Challenge.startSkeleton && !__instance.data._isSkeleton)
         {
+            __instance.data._isSkeleton = true;
             __instance.data.SetSkeleton(true);
-            __instance.refs.customization.refs.SetSkeleton(true, true);
-            __instance.refs.customization.HideHuman();
+
             if (Challenge.endRunOnCurse)
             {
                 return;
