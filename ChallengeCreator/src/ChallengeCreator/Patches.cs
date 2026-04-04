@@ -100,6 +100,7 @@ public static class ChallengeCreatorPatches
                 ChallengeNetworker.Instance?.photonView.RPC("RPC_ReceiveSync", RpcTarget.Others, json);
 
                 UIUtils.DisplayChallenge(GUIManager.instance);
+                Plugin.Log.LogInfo($"Current challenge config:\n\n{json}\n\n");
             }));
         }
         else
@@ -199,18 +200,6 @@ public static class ChallengeCreatorPatches
     }
 
     [HarmonyPostfix]
-    [HarmonyPatch(typeof(Character), nameof(Character.Start))]
-    public static void GiveCrab(Character __instance)
-    {
-        if (!__instance.IsLocal) return;
-
-        if (Challenge.crab)
-        {
-            Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
-        }
-    }
-
-    [HarmonyPostfix]
     [HarmonyPatch(typeof(Character), nameof(Character.Update))]
     public static void GiveSkeleton(Character __instance)
     {
@@ -226,6 +215,11 @@ public static class ChallengeCreatorPatches
                 return;
             }
             __instance.refs.afflictions.AddStatus(CharacterAfflictions.STATUSTYPE.Curse, 0.25f);
+        }
+
+        if (Challenge.crab && Character.localCharacter.refs.afflictions.GetCurrentStatus(STATUSTYPE.Crab) == 0)
+        {
+            Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
         }
     }
 

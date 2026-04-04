@@ -1,3 +1,8 @@
+# v1.0.3 - Bug fix
+
+- Fixed Crab status AGAIN.
+- Logging the json of the config to the console for easier debugging.
+
 # v1.0.2 - Bug fix
 
 - Fixed startSkeleton not working
