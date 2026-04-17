@@ -665,4 +665,27 @@ public static class ChallengeCreatorPatches
         }
         return true;
     }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(Campfire), nameof(Campfire.Light_Rpc))]
+    public static void GivePandoraEffect(Campfire __instance)
+    {
+        if (Challenge.pandoraFires)
+        {
+            var chaos = new Affliction_Chaos()
+            {
+                averageBonusStamina = 0.3f,
+                standardDeviationBonusStamina = 0.25f,
+                statusAmountAverage = 0.4f,
+                statusAmountStandardDeviation = 0.3f,
+            };
+
+            Character.localCharacter.refs.afflictions.AddAffliction(chaos);
+
+            System.Random random = new System.Random();
+            float amount = random.Next(10) / 100;
+
+            Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Curse, amount);
+        }
+    }
 }

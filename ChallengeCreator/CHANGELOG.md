@@ -1,3 +1,7 @@
+# v1.0.4 - New Feature
+
+- Added `pandoraFires` bool
+
 # v1.0.3 - Bug fix
 
 - Fixed Crab status AGAIN.

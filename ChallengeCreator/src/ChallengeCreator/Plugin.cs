@@ -48,13 +48,6 @@ namespace ChallengeCreator
             debugItemIDs = Config.Bind("General", "Debug Item IDs", false, "If true, item IDs will be printed to the log. Useful for making challenges.");
             debugAchievementTypes = Config.Bind("General", "Debug Achievement Types", false, "If true, achievement types will be printed to the log. Useful for making challenges.");
 
-            string[] resourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
-            Log.LogInfo($"Found {resourceNames.Length} embedded resources:");
-            foreach (string resource in resourceNames)
-            {
-                Log.LogInfo($"> {resource}");
-            }
-
             harmony.PatchAll();
         }
     }

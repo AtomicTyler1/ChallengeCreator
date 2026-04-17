@@ -40,4 +40,5 @@ public class CurrentChallenge
     public bool alwaysNearSighted { get; set; } = false; // If true, you will always be near sighted
     public bool disableHunger { get; set; } = false; // If true, hunger will be disabled.
     public bool crab { get; set; } = false; // If true, you start off with 97.5% of the crab status.
+    public bool pandoraFires { get; set; } = false; // If true, campfires give random afflictions when lit.
 }
