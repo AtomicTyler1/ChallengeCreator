@@ -2,13 +2,11 @@
 using HarmonyLib;
 using Peak.Afflictions;
 using Photon.Pun;
-using Photon.Pun.Demo.PunBasics;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.TextCore.Text;
 using Zorro.Core;
 using static CharacterAfflictions;
 
@@ -23,9 +21,11 @@ public static class ChallengeCreatorPatches
 
     private static bool _usedOneUseInItemless = false;
     private static bool _characterHasTick = false;
+    private static bool _characterGivenFungus = false;
 
     public static bool runValid = true;
 
+    // Update this another day
     private static readonly HashSet<int> ItemlessBlockedItems = new()
     {
         1,   // ANTI-ROPE SPOOL
@@ -83,6 +83,7 @@ public static class ChallengeCreatorPatches
         UsedOneTimeUseItems.Clear();
         _characterHasTick = false;
         _usedOneUseInItemless = false;
+        _characterGivenFungus = false;
         runValid = true;
 
         if (ChallengeNetworker.Instance == null)
@@ -97,6 +98,7 @@ public static class ChallengeCreatorPatches
         {
             __instance.StartCoroutine(ChallengeReader.GetCurrentChallengeRoutine(() => {
                 string json = ChallengeReader.GetCurrentChallengeJson();
+                ChallengeReader.LoadChallengeFromJson(json);
                 ChallengeNetworker.Instance?.photonView.RPC("RPC_ReceiveSync", RpcTarget.Others, json);
 
                 UIUtils.DisplayChallenge(GUIManager.instance);
@@ -107,6 +109,11 @@ public static class ChallengeCreatorPatches
         {
             ChallengeNetworker.Instance?.RequestConfigFromHost();
             UIUtils.WarningMessage("Requesting challenge configuration from the host...");
+        }
+
+        if (Challenge != null && Challenge.warpFungusMovementOnly)
+        {
+            Character.localCharacter.refs.items.SpawnItemInHand("WarpFungus");
         }
 
         if (Plugin.debugItemIDs.Value) LogItemDatabase();
@@ -191,7 +198,7 @@ public static class ChallengeCreatorPatches
     public static bool BlockJump(CharacterMovement __instance)
     {
         if (!__instance.character.IsLocal) return true;
-        if (Challenge.noJumping)
+        if (Challenge.noJumping || Challenge.warpFungusMovementOnly)
         {
             UIUtils.ChallengeBreakingMessage("You cannot jump!");
             return false;
@@ -221,6 +228,12 @@ public static class ChallengeCreatorPatches
         {
             Character.localCharacter.refs.afflictions.AddStatus(STATUSTYPE.Crab, 0.975f);
         }
+
+        if (PhotonNetwork.IsConnected && Challenge.warpFungusMovementOnly && !_characterGivenFungus)
+        {
+            Character.localCharacter.refs.items.SpawnItemInHand("WarpFungus");
+            _characterGivenFungus = true;
+        }
     }
 
     [HarmonyPostfix]
@@ -249,7 +262,7 @@ public static class ChallengeCreatorPatches
     public static bool BlockLungeJump(CharacterMovement __instance)
     {
         if (!__instance.character.IsLocal) return true;
-        if (Challenge.noJumping)
+        if (Challenge.noJumping || Challenge.warpFungusMovementOnly)
         {
             UIUtils.ChallengeBreakingMessage("You cannot jump so you cannot lunge!!");
             return false;
@@ -269,13 +282,13 @@ public static class ChallengeCreatorPatches
 
         if (isClimbing)
         {
-            if (Challenge.controlLockLeftAndRight_Climb) input.y = 0f;
-            if (Challenge.controlLockForwardAndBackward_Climb) input.x = 0f;
+            if (Challenge.controlLockLeftAndRight_Climb || Challenge.warpFungusMovementOnly) input.y = 0f;
+            if (Challenge.controlLockForwardAndBackward_Climb || Challenge.warpFungusMovementOnly) input.x = 0f;
         }
         else
         {
-            if (Challenge.controlLockLeftAndRight_Ground) input.y = 0f;
-            if (Challenge.controlLockForwardAndBackward_Ground) input.x = 0f;
+            if (Challenge.controlLockLeftAndRight_Ground || Challenge.warpFungusMovementOnly) input.y = 0f;
+            if (Challenge.controlLockForwardAndBackward_Ground || Challenge.warpFungusMovementOnly) input.x = 0f;
         }
         __instance.input.movementInput = input;
     }
@@ -302,6 +315,37 @@ public static class ChallengeCreatorPatches
             return false;
         }
         return true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(Character), nameof(Character.UnPassOutDone))]
+    public static void Unpassout(Character __instance)
+    {
+        if (Challenge.warpFungusMovementOnly && __instance == Character.localCharacter)
+        {
+            Character.localCharacter.refs.items.SpawnItemInHand("WarpFungus");
+        }
+    }
+
+    public static Item _lastDroppedItem;
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(CharacterItems), nameof(CharacterItems.DropItemRpc))]
+    public static void _DropItem(CharacterItems __instance, float throwCharge, byte slotID, Vector3 spawnPos, Vector3 velocity, Quaternion rotation, ItemInstanceData itemInstanceData, bool cacheToDroppedItems)
+    {
+        if (__instance.character != Character.localCharacter) { return; }
+        _lastDroppedItem = __instance.character.data.currentItem;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(CharacterItems), nameof(CharacterItems.DropItemRpc))]
+    public static void DropItem(CharacterItems __instance, float throwCharge, byte slotID, Vector3 spawnPos, Vector3 velocity, Quaternion rotation, ItemInstanceData itemInstanceData, bool cacheToDroppedItems)
+    {
+        if (__instance.character != Character.localCharacter) { return; }
+        if (_lastDroppedItem.itemID == 181 && Challenge.warpFungusMovementOnly) // Warp Fungus
+        {
+            Character.localCharacter.refs.items.SpawnItemInHand("WarpFungus");
+        }
     }
 
     [HarmonyPostfix]

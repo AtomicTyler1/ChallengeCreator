@@ -1,3 +1,9 @@
+# v1.0.5 - New Feature
+
+- Added `warpFungusMovementOnly`
+
+> This disables moving whilst climbing, jumping and movement as a whole.
+
 # v1.0.4 - New Feature
 
 - Added `pandoraFires` bool
